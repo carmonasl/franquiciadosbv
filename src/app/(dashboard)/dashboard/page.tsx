@@ -3,6 +3,9 @@
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, Newspaper, BarChart3, Users } from 'lucide-react'
+import { AuthDebugComponent } from "@/components/auth-debug-component";
+import { SessionDebugTest } from "@/components/session-debug-test";
+import { DirectSupabaseTest } from "@/components/direct-supabase-test";
 
 export default function DashboardPage() {
     const { profile, isAdmin } = useAuth()
@@ -37,6 +40,11 @@ export default function DashboardPage() {
     return (
         <div className="space-y-6">
             <div>
+                <DirectSupabaseTest />
+                <SessionDebugTest />
+                <AuthDebugComponent />
+
+
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-gray-600">
                     Bienvenido al portal, {profile?.full_name}
