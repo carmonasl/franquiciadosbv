@@ -10,6 +10,7 @@ export function useNews() {
   const [error, setError] = useState<string | null>(null);
 
   const isMounted = useRef(true);
+  const supabase = createClient();
 
   const fetchNews = useCallback(async () => {
     if (!isMounted.current) return;
@@ -20,7 +21,6 @@ export function useNews() {
     try {
       console.log("Fetching news...");
       console.time("fetchNews");
-      const supabase = createClient();
 
       const { data, error } = await supabase
         .from("news")
