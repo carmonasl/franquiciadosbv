@@ -12,28 +12,33 @@ export function useDocuments() {
 
   const fetchDocuments = async () => {
     try {
+      console.log("🚀 Starting fetchDocuments...");
       setLoading(true);
-      console.log("Fetching documents...");
 
       const { data, error } = await supabase
         .from("documents")
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("Documents response:", { data, error });
+      console.log("📊 Supabase response:", {
+        data,
+        error,
+        dataLength: data?.length,
+      });
 
       if (error) {
-        console.error("Error fetching documents:", error);
+        console.error("❌ Supabase error:", error);
         setError(error.message);
       } else {
-        console.log("Documents loaded:", data?.length);
+        console.log("✅ Setting documents:", data?.length || 0);
         setDocuments(data || []);
         setError(null);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("💥 Catch error:", err);
       setError("Error inesperado al cargar documentos");
     } finally {
+      console.log("🏁 Setting loading to false");
       setLoading(false);
     }
   };
