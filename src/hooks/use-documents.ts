@@ -9,56 +9,50 @@ export function useDocuments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMounted = useRef(true);
 
-  const fetchDocuments = useCallback(
-    async (forceRefresh = false, attempt = 0) => {
-      const maxRetries = 2;
-      setLoading(true);
-      setError(null);
+  const fetchDocuments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-      // AbortController para cancelar si se tarda demasiado
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+    // Cancelamos cualquier fetch previo
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-      try {
-        const timeout = setTimeout(() => controller.abort(), 8000); // 8 segundos
+    try {
+      // Timeout de 8s usando AbortController
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
-        const { data, error } = await supabase
-          .from("documents")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .abortSignal(controller.signal);
+      const { data, error } = await supabase
+        .from("documents")
+        .select("id, name, file_path, file_size, mime_type, created_at") // solo los campos necesarios
+        .order("created_at", { ascending: false })
+        // @ts-ignore supabase internal abortSignal
+        .abortSignal(controller.signal);
 
-        clearTimeout(timeout);
+      clearTimeout(timeout);
 
-        if (!isMounted.current) return; // componente desmontado
+      if (!isMounted.current) return;
 
-        if (error) throw error;
-        setDocuments(data || []);
-        setError(null);
-      } catch (err) {
-        if (!isMounted.current) return;
-        const e = err as Error;
+      if (error) throw error;
 
-        if (attempt < maxRetries && e.name !== "AbortError") {
-          const delay = attempt === 0 ? 100 : 2000;
-          setTimeout(() => fetchDocuments(forceRefresh, attempt + 1), delay);
-        } else {
-          if (e.name === "AbortError") {
-            setError("La conexión se canceló por timeout.");
-          } else {
-            setError("Error de conexión. Verifica tu internet.");
-          }
-        }
-      } finally {
-        if (isMounted.current) setLoading(false);
+      setDocuments(data || []);
+    } catch (err) {
+      if (!isMounted.current) return;
+      const e = err as Error;
+
+      if (e.name === "AbortError") {
+        setError("La petición de documentos se canceló por timeout.");
+      } else {
+        setError("Error cargando documentos. Intenta recargar.");
       }
-    },
-    [supabase]
-  );
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -121,6 +115,6 @@ export function useDocuments() {
     error,
     uploadDocument,
     downloadDocument,
-    refetch: () => fetchDocuments(true),
+    refetch: fetchDocuments,
   };
 }
