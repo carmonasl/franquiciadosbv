@@ -37,14 +37,9 @@ export function useAuth() {
       } catch (error) {
         console.error("Auth error:", error);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) setLoading(false); // Solo se resuelve cuando termina realmente
       }
     };
-
-    // Timeout de seguridad
-    const timeout = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 3000);
 
     getSession();
 
@@ -72,7 +67,6 @@ export function useAuth() {
 
     return () => {
       isMounted = false;
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
