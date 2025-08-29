@@ -11,8 +11,7 @@ export function useNews() {
 
   const isMounted = useRef(true);
 
-  const fetchNews = useCallback(async (attempt = 0) => {
-    const maxRetries = 3;
+  const fetchNews = useCallback(async () => {
     if (!isMounted.current) return;
 
     setLoading(true);
@@ -35,21 +34,12 @@ export function useNews() {
       if (error) throw error;
 
       setNews(data || []);
-      setError(null);
     } catch (err) {
       if (!isMounted.current) return;
 
       const e = err as Error;
-      console.error(`News fetch error (attempt ${attempt + 1}):`, e);
-
-      if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000;
-        setTimeout(() => fetchNews(attempt + 1), delay);
-      } else {
-        setError(
-          e.message || "Error al cargar noticias después de varios intentos"
-        );
-      }
+      console.error("News fetch error:", e);
+      setError(e.message || "Error al cargar noticias");
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -106,6 +96,6 @@ export function useNews() {
     createNews,
     updateNews,
     deleteNews,
-    refetch: () => fetchNews(0),
+    refetch: fetchNews,
   };
 }
