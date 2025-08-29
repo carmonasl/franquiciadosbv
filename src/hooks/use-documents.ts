@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MyDocument } from "@/types";
 
@@ -9,66 +9,65 @@ export function useDocuments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMounted = useRef(true);
 
   const fetchDocuments = useCallback(
-    async (retryCount = 0) => {
-      const maxRetries = 3;
+    async (forceRefresh = false, attempt = 0) => {
+      const maxRetries = 2;
+      setLoading(true);
+      setError(null);
+
+      // AbortController para cancelar si se tarda demasiado
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       try {
-        setLoading(true);
-        setError(null);
+        const timeout = setTimeout(() => controller.abort(), 8000); // 8 segundos
 
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("TIMEOUT")), 15000);
-        });
-
-        const fetchPromise = supabase
+        const { data, error } = await supabase
           .from("documents")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .abortSignal(controller.signal);
 
-        const { data, error } = await Promise.race([
-          fetchPromise,
-          timeoutPromise,
-        ]);
+        clearTimeout(timeout);
 
-        if (error) {
-          throw error;
-        }
+        if (!isMounted.current) return; // componente desmontado
 
+        if (error) throw error;
         setDocuments(data || []);
-        setLoading(false);
+        setError(null);
       } catch (err) {
-        const error = err as Error;
-        console.error(
-          `Documents fetch error (attempt ${retryCount + 1}):`,
-          error
-        );
+        if (!isMounted.current) return;
+        const e = err as Error;
 
-        if (retryCount < maxRetries) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          setTimeout(() => {
-            fetchDocuments(retryCount + 1);
-          }, delay);
+        if (attempt < maxRetries && e.name !== "AbortError") {
+          const delay = attempt === 0 ? 100 : 2000;
+          setTimeout(() => fetchDocuments(forceRefresh, attempt + 1), delay);
         } else {
-          // Mensaje específico para timeout
-          if (error.message === "TIMEOUT") {
-            setError("Error consiguiendo los ficheros");
+          if (e.name === "AbortError") {
+            setError("La conexión se canceló por timeout.");
           } else {
-            setError(
-              error.message ||
-                "Error al cargar documentos después de varios intentos"
-            );
+            setError("Error de conexión. Verifica tu internet.");
           }
-          setLoading(false);
         }
+      } finally {
+        if (isMounted.current) setLoading(false);
       }
     },
     [supabase]
   );
 
   useEffect(() => {
+    isMounted.current = true;
     fetchDocuments();
+
+    return () => {
+      isMounted.current = false;
+      abortControllerRef.current?.abort();
+    };
   }, [fetchDocuments]);
 
   const uploadDocument = async (
@@ -81,9 +80,7 @@ export function useDocuments() {
       .from("documents")
       .upload(fileName, file);
 
-    if (uploadError) {
-      throw uploadError;
-    }
+    if (uploadError) throw uploadError;
 
     const { data, error } = await supabase
       .from("documents")
@@ -97,9 +94,7 @@ export function useDocuments() {
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     setDocuments((prev) => [data, ...prev]);
     return data;
@@ -110,9 +105,7 @@ export function useDocuments() {
       .from("documents")
       .download(document.file_path);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     const url = URL.createObjectURL(data);
     const a = window.document.createElement("a");
@@ -128,6 +121,6 @@ export function useDocuments() {
     error,
     uploadDocument,
     downloadDocument,
-    refetch: () => fetchDocuments(0),
+    refetch: () => fetchDocuments(true),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { NewsItem } from "@/types";
 
@@ -10,61 +10,72 @@ export function useNews() {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMounted = useRef(true);
+
   const fetchNews = useCallback(
-    async (retryCount = 0) => {
+    async (attempt = 0) => {
       const maxRetries = 3;
+      setLoading(true);
+      setError(null);
+
+      // Cancelamos cualquier petición anterior
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       try {
-        setLoading(true);
-        setError(null);
+        const timeout = setTimeout(() => controller.abort(), 15000); // 15s
 
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("TIMEOUT")), 15000);
-        });
-
-        const fetchPromise = supabase
+        const { data, error } = await supabase
           .from("news")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .abortSignal(controller.signal);
 
-        const { data, error } = await Promise.race([
-          fetchPromise,
-          timeoutPromise,
-        ]);
+        clearTimeout(timeout);
 
-        if (error) {
-          throw error;
-        }
+        if (!isMounted.current) return;
+
+        if (error) throw error;
 
         setNews(data || []);
-        setLoading(false);
+        setError(null);
       } catch (err) {
-        const error = err as Error;
-        console.error(`News fetch error (attempt ${retryCount + 1}):`, error);
+        if (!isMounted.current) return;
 
-        if (retryCount < maxRetries) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          setTimeout(() => {
-            fetchNews(retryCount + 1);
-          }, delay);
+        const e = err as Error;
+        console.error(`News fetch error (attempt ${attempt + 1}):`, e);
+
+        if (attempt < maxRetries && e.name !== "AbortError") {
+          const delay = Math.pow(2, attempt) * 1000;
+          setTimeout(() => fetchNews(attempt + 1), delay);
         } else {
-          if (error.message === "TIMEOUT") {
+          if (e.name === "AbortError") {
+            setError("La petición de noticias se canceló por timeout.");
+          } else if (e.message === "TIMEOUT") {
             setError("Error consiguiendo las noticias");
           } else {
             setError(
-              error.message ||
-                "Error al cargar noticias después de varios intentos"
+              e.message || "Error al cargar noticias después de varios intentos"
             );
           }
-          setLoading(false);
         }
+      } finally {
+        if (isMounted.current) setLoading(false);
       }
     },
     [supabase]
   );
 
   useEffect(() => {
+    isMounted.current = true;
     fetchNews();
+
+    return () => {
+      isMounted.current = false;
+      abortControllerRef.current?.abort();
+    };
   }, [fetchNews]);
 
   const createNews = async (title: string, content: string) => {
@@ -74,9 +85,7 @@ export function useNews() {
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     setNews((prev) => [data, ...prev]);
     return data;
@@ -84,15 +93,13 @@ export function useNews() {
 
   const updateNews = async (id: number, title: string, content: string) => {
     const { data, error } = await supabase
-      .from("news") // ← Faltaba esto
+      .from("news")
       .update({ title, content, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     setNews((prev) => prev.map((item) => (item.id === id ? data : item)));
     return data;
@@ -101,9 +108,7 @@ export function useNews() {
   const deleteNews = async (id: number) => {
     const { error } = await supabase.from("news").delete().eq("id", id);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     setNews((prev) => prev.filter((item) => item.id !== id));
   };
