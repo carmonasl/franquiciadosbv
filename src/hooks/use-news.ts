@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { NewsItem } from "@/types";
 
@@ -10,32 +10,62 @@ export function useNews() {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
-  const fetchNews = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("news")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const fetchNews = useCallback(
+    async (retryCount = 0) => {
+      const maxRetries = 3;
 
-      if (error) {
-        console.error("Error fetching news:", error);
-        setError(error.message);
-      } else {
-        setNews(data || []);
+      try {
+        setLoading(true);
         setError(null);
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT")), 15000);
+        });
+
+        const fetchPromise = supabase
+          .from("news")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        const { data, error } = await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ]);
+
+        if (error) {
+          throw error;
+        }
+
+        setNews(data || []);
+        setLoading(false);
+      } catch (err) {
+        const error = err as Error;
+        console.error(`News fetch error (attempt ${retryCount + 1}):`, error);
+
+        if (retryCount < maxRetries) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => {
+            fetchNews(retryCount + 1);
+          }, delay);
+        } else {
+          if (error.message === "TIMEOUT") {
+            setError("Error consiguiendo las noticias");
+          } else {
+            setError(
+              error.message ||
+                "Error al cargar noticias después de varios intentos"
+            );
+          }
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      setError("Error inesperado al cargar noticias");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [fetchNews]);
 
   const createNews = async (title: string, content: string) => {
     const { data, error } = await supabase
@@ -54,7 +84,7 @@ export function useNews() {
 
   const updateNews = async (id: number, title: string, content: string) => {
     const { data, error } = await supabase
-      .from("news")
+      .from("news") // ← Faltaba esto
       .update({ title, content, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
@@ -85,6 +115,6 @@ export function useNews() {
     createNews,
     updateNews,
     deleteNews,
-    refetch: fetchNews,
+    refetch: () => fetchNews(0),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MyDocument } from "@/types";
 
@@ -10,44 +10,71 @@ export function useDocuments() {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
-  const fetchDocuments = async () => {
-    try {
-      console.log("🚀 Starting fetchDocuments...");
-      setLoading(true);
+  const fetchDocuments = useCallback(
+    async (retryCount = 0) => {
+      const maxRetries = 3;
 
-      const { data, error } = await supabase
-        .from("documents")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      console.log("📊 Supabase response:", {
-        data,
-        error,
-        dataLength: data?.length,
-      });
-
-      if (error) {
-        console.error("❌ Supabase error:", error);
-        setError(error.message);
-      } else {
-        console.log("✅ Setting documents:", data?.length || 0);
-        setDocuments(data || []);
+      try {
+        setLoading(true);
         setError(null);
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("TIMEOUT")), 15000);
+        });
+
+        const fetchPromise = supabase
+          .from("documents")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        const { data, error } = await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ]);
+
+        if (error) {
+          throw error;
+        }
+
+        setDocuments(data || []);
+        setLoading(false);
+      } catch (err) {
+        const error = err as Error;
+        console.error(
+          `Documents fetch error (attempt ${retryCount + 1}):`,
+          error
+        );
+
+        if (retryCount < maxRetries) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => {
+            fetchDocuments(retryCount + 1);
+          }, delay);
+        } else {
+          // Mensaje específico para timeout
+          if (error.message === "TIMEOUT") {
+            setError("Error consiguiendo los ficheros");
+          } else {
+            setError(
+              error.message ||
+                "Error al cargar documentos después de varios intentos"
+            );
+          }
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error("💥 Catch error:", err);
-      setError("Error inesperado al cargar documentos");
-    } finally {
-      console.log("🏁 Setting loading to false");
-      setLoading(false);
-    }
-  };
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
-  const uploadDocument = async (file: File) => {
+  const uploadDocument = async (
+    file: File,
+    franchiseId: string | null = null
+  ) => {
     const fileName = `${Date.now()}-${file.name}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -65,6 +92,7 @@ export function useDocuments() {
         file_path: uploadData.path,
         file_size: file.size,
         mime_type: file.type,
+        franchise_id: franchiseId,
       })
       .select()
       .single();
@@ -100,6 +128,6 @@ export function useDocuments() {
     error,
     uploadDocument,
     downloadDocument,
-    refetch: fetchDocuments,
+    refetch: () => fetchDocuments(0),
   };
 }
