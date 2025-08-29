@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { Profile } from "@/types";
 
@@ -13,62 +13,75 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    // Función para cargar el perfil del usuario
-    const loadProfile = async (currentUser: User) => {
+    const fetchSessionAndProfile = async () => {
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (isMounted) setProfile(data);
-      } catch (err) {
-        console.error("Error cargando perfil:", err);
-      }
-    };
-
-    // Obtener sesión inicial
-    const initAuth = async () => {
-      try {
+        console.log("🔍 Fetching session...");
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
         if (!isMounted) return;
 
+        if (sessionError) {
+          console.error("❌ Session error:", sessionError);
+        }
+
         setUser(session?.user ?? null);
+        console.log("🟢 Session user:", session?.user);
 
         if (session?.user) {
-          await loadProfile(session.user);
+          console.log("🔍 Fetching profile for user:", session.user.id);
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error("❌ Profile fetch error:", profileError);
+          } else {
+            console.log("🟢 Profile fetched:", profileData);
+            if (isMounted) setProfile(profileData);
+          }
         }
       } catch (err) {
-        console.error("Error inicializando auth:", err);
+        console.error("❌ Auth error:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    initAuth();
+    fetchSessionAndProfile();
 
-    // Suscripción a cambios de sesión
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (event, session: Session | null) => {
-        if (!isMounted) return;
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
 
-        setUser(session?.user ?? null);
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          await loadProfile(session.user);
+      if (session?.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error(
+            "❌ Profile fetch error on auth state change:",
+            profileError
+          );
         } else {
-          setProfile(null);
+          setProfile(profileData);
         }
-
-        setLoading(false);
+      } else {
+        setProfile(null);
       }
-    );
+
+      setLoading(false);
+    });
 
     return () => {
       isMounted = false;
@@ -78,8 +91,6 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
   };
 
   return {

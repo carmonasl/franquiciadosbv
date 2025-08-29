@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/use-auth";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -22,14 +21,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-
-  // Redirigir automáticamente si ya hay usuario
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.replace("/dashboard");
-    }
-  }, [user, authLoading, router]);
+  const DEBUG = false; // poner false para producción
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,36 +29,39 @@ export function LoginForm() {
     setError("");
 
     try {
+      console.log("🧹 Intentando limpiar sesión previa (sin bloquear)...");
+      supabase.auth
+        .signOut()
+        .catch((err) =>
+          console.warn("⚠️ Error al limpiar sesión previa:", err)
+        );
+
+      console.log("🚀 Intentando login con:", email);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log("📦 Respuesta login:", { data, error });
+
       if (error) {
         setError(error.message);
-        return;
-      }
-
-      if (data.user) {
-        // Esperamos un momento para que la cookie se actualice
-        const checkSession = async () => {
-          for (let i = 0; i < 10; i++) {
-            const { data: sessionData } = await supabase.auth.getSession();
-            if (sessionData.session?.user) {
-              router.replace("/dashboard");
-              return;
-            }
-            await new Promise((r) => setTimeout(r, 200));
-          }
-          setError("No se pudo iniciar sesión. Intenta de nuevo.");
-        };
-
-        checkSession();
+        console.error("❌ Error de login:", error);
+      } else if (data?.user) {
+        console.log("✅ Login exitoso, usuario:", data.user.id);
+        if (!DEBUG && data.user) {
+          window.location.href = "/dashboard";
+        }
+      } else {
+        setError("No se devolvió usuario en el login");
+        console.warn("⚠️ Login sin usuario en data:", data);
       }
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Error inesperado. Intenta de nuevo.");
+      console.error("🔥 Excepción en login:", err);
+      setError("Error inesperado al iniciar sesión");
     } finally {
+      console.log("🔄 Fin de handleSubmit, desactivando loading");
       setLoading(false);
     }
   };
