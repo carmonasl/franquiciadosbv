@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { Profile } from "@/types";
 
@@ -13,7 +13,23 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    const getSession = async () => {
+    // Función para cargar el perfil del usuario
+    const loadProfile = async (currentUser: User) => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .single();
+
+        if (isMounted) setProfile(data);
+      } catch (err) {
+        console.error("Error cargando perfil:", err);
+      }
+    };
+
+    // Obtener sesión inicial
+    const initAuth = async () => {
       try {
         const {
           data: { session },
@@ -24,44 +40,35 @@ export function useAuth() {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-
-          if (isMounted) setProfile(profile);
+          await loadProfile(session.user);
         }
-      } catch (error) {
-        console.error("Auth error:", error);
+      } catch (err) {
+        console.error("Error inicializando auth:", err);
       } finally {
-        if (isMounted) setLoading(false); // Solo se resuelve cuando termina realmente
+        if (isMounted) setLoading(false);
       }
     };
 
-    getSession();
+    initAuth();
 
+    // Suscripción a cambios de sesión
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return;
+    } = supabase.auth.onAuthStateChange(
+      async (event, session: Session | null) => {
+        if (!isMounted) return;
 
-      setUser(session?.user ?? null);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+        if (session?.user) {
+          await loadProfile(session.user);
+        } else {
+          setProfile(null);
+        }
 
-        setProfile(profile);
-      } else {
-        setProfile(null);
+        setLoading(false);
       }
-
-      setLoading(false);
-    });
+    );
 
     return () => {
       isMounted = false;
@@ -71,6 +78,8 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   };
 
   return {

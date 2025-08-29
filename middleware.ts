@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
@@ -25,7 +25,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Proteger rutas del dashboard
   const protectedRoutes = ["/dashboard", "/documents", "/news", "/reports"];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
@@ -37,7 +36,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirigir usuarios autenticados del login
   if (request.nextUrl.pathname === "/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";

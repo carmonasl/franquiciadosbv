@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/use-auth";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,31 +22,53 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
+  // Redirigir automáticamente si ya hay usuario
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    console.log("Intentando login con:", email);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      if (error) {
+        setError(error.message);
+        return;
+      }
 
-    console.log("Respuesta login:", { data, error });
+      if (data.user) {
+        // Esperamos un momento para que la cookie se actualice
+        const checkSession = async () => {
+          for (let i = 0; i < 10; i++) {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session?.user) {
+              router.replace("/dashboard");
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          setError("No se pudo iniciar sesión. Intenta de nuevo.");
+        };
 
-    if (error) {
-      setError(error.message);
-      console.error("Error de login:", error);
-    } else if (data.user) {
-      console.log("Login exitoso, usuario:", data.user.id);
-      // Forzar refresh completo
-      window.location.href = "/dashboard";
+        checkSession();
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Error inesperado. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
