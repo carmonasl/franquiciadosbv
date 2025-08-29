@@ -1,73 +1,57 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { Metric } from "@/types";
 
 export function useMetrics() {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
-  const abortControllerRef = useRef<AbortController | null>(null);
   const isMounted = useRef(true);
 
-  const fetchMetrics = useCallback(
-    async (attempt = 0) => {
-      const maxRetries = 3;
-      setLoading(true);
-      setError(null);
+  const fetchMetrics = useCallback(async () => {
+    if (!isMounted.current) return;
 
-      // Cancelamos cualquier petición anterior
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+    setLoading(true);
+    setError(null);
 
-      try {
-        // Timeout real con AbortController
-        const timeout = setTimeout(() => controller.abort(), 15000); // 15s
+    try {
+      console.log("Fetching metrics...");
 
-        const { data, error } = await supabase
-          .from("metrics")
-          .select("*")
-          .order("month", { ascending: false })
-          .abortSignal(controller.signal);
+      const { data, error } = await supabase
+        .from("metrics")
+        .select("*")
+        .order("month", { ascending: false });
 
-        clearTimeout(timeout);
+      console.log("Raw metrics data:", data, "Error:", error);
 
-        if (!isMounted.current) return;
+      if (!isMounted.current) return;
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setMetrics(data || []);
-        setError(null);
-      } catch (err) {
-        if (!isMounted.current) return;
+      // Mapeo seguro para evitar null
+      const safeData = (data || []).map((m) => ({
+        id: m.id,
+        month: m.month ?? "",
+        revenue: m.revenue ?? 0,
+        customers: m.customers ?? 0,
+        orders: m.orders ?? 0,
+        franchise_id: m.franchise_id ?? "",
+        created_at: m.created_at ?? new Date().toISOString(),
+      }));
+      setMetrics(safeData);
+    } catch (err) {
+      if (!isMounted.current) return;
 
-        const e = err as Error;
-        console.error(`Metrics fetch error (attempt ${attempt + 1}):`, e);
-
-        if (attempt < maxRetries && e.name !== "AbortError") {
-          const delay = Math.pow(2, attempt) * 1000;
-          setTimeout(() => fetchMetrics(attempt + 1), delay);
-        } else {
-          if (e.name === "AbortError") {
-            setError("La petición de métricas se canceló por timeout.");
-          } else if (e.message === "TIMEOUT") {
-            setError("Error consiguiendo las métricas");
-          } else {
-            setError(
-              e.message || "Error al cargar métricas después de varios intentos"
-            );
-          }
-        }
-      } finally {
-        if (isMounted.current) setLoading(false);
-      }
-    },
-    [supabase]
-  );
+      const e = err as Error;
+      console.error("Metrics fetch error:", e);
+      setError(e.message || "Error al cargar métricas");
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     isMounted.current = true;
@@ -75,7 +59,6 @@ export function useMetrics() {
 
     return () => {
       isMounted.current = false;
-      abortControllerRef.current?.abort();
     };
   }, [fetchMetrics]);
 
@@ -83,6 +66,6 @@ export function useMetrics() {
     metrics,
     loading,
     error,
-    refetch: () => fetchMetrics(0),
+    refetch: fetchMetrics,
   };
 }
