@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut } from "lucide-react";
+import { User } from "lucide-react";
 
 export async function Header() {
   const supabase = await createClient();
@@ -59,16 +59,6 @@ export async function Header() {
           <DropdownMenuItem className="cursor-pointer">
             <User className="mr-2 h-4 w-4 text-[#159a93]" />
             Perfil
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = "/auth/login";
-            }}
-            className="cursor-pointer text-red-600 focus:text-red-600"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Cerrar sesión
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
