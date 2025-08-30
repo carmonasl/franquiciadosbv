@@ -30,21 +30,28 @@ export default async function NewsPage() {
   const isAdmin = profile?.role === "admin";
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="flex-1 w-full flex flex-col gap-8 p-6">
+      {/* Encabezado */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Noticias</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-[#159a93]">Noticias</h1>
+          <p className="mt-1 text-gray-600">
             Mantente al día con las últimas novedades de la franquicia
           </p>
         </div>
 
-        {/* Only the form is a client component */}
-        {isAdmin && <NewsForm />}
+        {/* Formulario de creación (solo admin) */}
+        {isAdmin && (
+          <div className="lg:w-1/3">
+            <NewsForm />
+          </div>
+        )}
       </div>
 
-      {/* Server component for listing news */}
-      <NewsList />
+      {/* Lista de noticias */}
+      <div className="space-y-4">
+        <NewsList />
+      </div>
     </div>
   );
 }

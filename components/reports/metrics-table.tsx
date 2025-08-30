@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Metric } from "@/types"; // adjust path
+import { Metric } from "@/types"; // ajusta la ruta
 
 export default async function MetricsTable() {
   const supabase = await createClient();
@@ -21,9 +21,9 @@ export default async function MetricsTable() {
 
   if (error || !metrics || metrics.length === 0) {
     return (
-      <Card>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
         <CardHeader>
-          <CardTitle>Métricas Detalladas</CardTitle>
+          <CardTitle className="text-[#159a93]">Métricas Detalladas</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-center text-gray-500 py-8">
@@ -46,8 +46,11 @@ export default async function MetricsTable() {
     const isPositive = growth > 0;
     return (
       <Badge
-        variant={isPositive ? "default" : "destructive"}
-        className="text-xs"
+        className={`text-xs ${
+          isPositive
+            ? "bg-[#159a93]/10 text-[#159a93]"
+            : "bg-red-50 text-red-600"
+        }`}
       >
         {isPositive ? "+" : ""}
         {growth.toFixed(1)}%
@@ -56,19 +59,21 @@ export default async function MetricsTable() {
   };
 
   return (
-    <Card>
+    <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
       <CardHeader>
-        <CardTitle>Métricas Detalladas</CardTitle>
+        <CardTitle className="text-[#159a93]">Métricas Detalladas</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
+      <CardContent className="overflow-x-auto">
+        <Table className="bg-white">
           <TableHeader>
             <TableRow>
-              <TableHead>Mes</TableHead>
-              <TableHead>Ingresos</TableHead>
-              <TableHead>Clientes</TableHead>
-              <TableHead>Pedidos</TableHead>
-              <TableHead>Promedio por Pedido</TableHead>
+              <TableHead className="text-gray-900">Mes</TableHead>
+              <TableHead className="text-gray-900">Ingresos</TableHead>
+              <TableHead className="text-gray-900">Clientes</TableHead>
+              <TableHead className="text-gray-900">Pedidos</TableHead>
+              <TableHead className="text-gray-900">
+                Promedio por Pedido
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -78,21 +83,21 @@ export default async function MetricsTable() {
                 metric.orders > 0 ? metric.revenue / metric.orders : 0;
 
               return (
-                <TableRow key={metric.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={metric.id} className="hover:bg-gray-50">
+                  <TableCell className="font-medium text-gray-900">
                     {new Date(metric.month).toLocaleDateString("es", {
                       month: "long",
                       year: "numeric",
                     })}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-900">
                     <div className="flex items-center space-x-2">
                       <span>{formatCurrency(metric.revenue)}</span>
                       {previousMetric &&
                         getGrowthBadge(metric.revenue, previousMetric.revenue)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-900">
                     <div className="flex items-center space-x-2">
                       <span>{metric.customers.toLocaleString()}</span>
                       {previousMetric &&
@@ -102,14 +107,16 @@ export default async function MetricsTable() {
                         )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-900">
                     <div className="flex items-center space-x-2">
                       <span>{metric.orders.toLocaleString()}</span>
                       {previousMetric &&
                         getGrowthBadge(metric.orders, previousMetric.orders)}
                     </div>
                   </TableCell>
-                  <TableCell>{formatCurrency(avgOrderValue)}</TableCell>
+                  <TableCell className="text-gray-900">
+                    {formatCurrency(avgOrderValue)}
+                  </TableCell>
                 </TableRow>
               );
             })}

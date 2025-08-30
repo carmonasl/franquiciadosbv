@@ -30,21 +30,31 @@ export default async function DocumentsPage() {
   const isAdmin = profile?.role === "admin";
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-6">
+    <div className="flex-1 w-full flex flex-col gap-8 p-6">
+      {/* Encabezado */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-[#159a93]">Documentos</h1>
+        <p className="mt-1 text-gray-600">
           Gestiona y descarga los documentos de la franquicia
         </p>
       </div>
 
+      {/* Contenido principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        {/* Lista de documentos */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow p-4 border border-[#159a93]/30">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            Lista de documentos
+          </h2>
           <DocumentList />
         </div>
 
+        {/* Subida de documentos (solo admin) */}
         {isAdmin && (
-          <div>
+          <div className="bg-white rounded-2xl shadow p-4 border border-[#159a93]/30">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Subir documento
+            </h2>
             <UploadForm />
           </div>
         )}

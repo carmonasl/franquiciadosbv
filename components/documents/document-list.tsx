@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { MyDocument } from "@/types";
 
 export default async function DocumentList() {
-  // ⚡ Await the client first
   const supabase = await createClient();
 
   // Get the current user
@@ -13,8 +12,8 @@ export default async function DocumentList() {
 
   if (userError || !user) {
     return (
-      <p className="p-6 text-red-600">
-        You must be logged in to see your documents.
+      <p className="p-6 text-red-600 bg-red-50 rounded-xl border border-red-200">
+        Debes iniciar sesión para ver tus documentos.
       </p>
     );
   }
@@ -28,41 +27,39 @@ export default async function DocumentList() {
 
   if (docsError) {
     return (
-      <p className="p-6 text-red-600">
-        Error fetching documents: {docsError.message}
+      <p className="p-6 text-red-600 bg-red-50 rounded-xl border border-red-200">
+        Error al cargar documentos: {docsError.message}
       </p>
     );
   }
 
   return (
-    <div className="p-6 text-black">
-      <h1 className="text-2xl font-bold mb-6">My Documents</h1>
-
+    <div className="text-gray-900">
       {!documents || documents.length === 0 ? (
-        <p>No documents found.</p>
+        <p className="text-gray-500 italic">No se encontraron documentos.</p>
       ) : (
         <ul className="space-y-3">
           {documents.map((doc: MyDocument) => (
             <li
               key={doc.id}
-              className="p-4 border rounded-lg shadow-sm flex justify-between items-center"
+              className="p-4 bg-white border border-[#159a93]/30 rounded-xl shadow-sm flex justify-between items-center hover:shadow-md transition-shadow"
             >
               <div>
-                <p className="font-semibold">{doc.name}</p>
-                <p className="text-sm">
+                <p className="font-medium text-gray-800">{doc.name}</p>
+                <p className="text-sm text-gray-500">
                   {doc.mime_type} — {(doc.file_size / 1024).toFixed(1)} KB
                 </p>
-                <p className="text-xs">
-                  Uploaded: {new Date(doc.created_at).toLocaleString()}
+                <p className="text-xs text-gray-400">
+                  Subido: {new Date(doc.created_at).toLocaleString()}
                 </p>
               </div>
               <a
                 href={doc.file_path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
+                className="text-[#159a93] font-medium hover:underline"
               >
-                View
+                Ver
               </a>
             </li>
           ))}

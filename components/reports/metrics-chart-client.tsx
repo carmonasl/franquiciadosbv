@@ -1,4 +1,3 @@
-// components/reports/metrics-chart-client.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,7 @@ interface Props {
 export function MetricsChartClient({ metrics }: Props) {
   if (!metrics || metrics.length === 0) {
     return (
-      <Card>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
         <CardContent className="py-8 text-center text-gray-500">
           No hay datos disponibles para mostrar gráficos
         </CardContent>
@@ -43,22 +42,25 @@ export function MetricsChartClient({ metrics }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Revenue Line Chart */}
-      <Card>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
         <CardHeader>
-          <CardTitle>Evolución de Ingresos</CardTitle>
+          <CardTitle className="text-[#159a93]">
+            Evolución de Ingresos
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" stroke="#374151" />
+              <YAxis stroke="#374151" />
               <Tooltip formatter={(value) => [`€${value}`, "Ingresos"]} />
               <Line
                 type="monotone"
                 dataKey="revenue"
-                stroke="#3b82f6"
-                strokeWidth={2}
+                stroke="#159a93"
+                strokeWidth={3}
+                dot={{ r: 4, stroke: "#159a93", strokeWidth: 2, fill: "#fff" }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -66,16 +68,16 @@ export function MetricsChartClient({ metrics }: Props) {
       </Card>
 
       {/* Customers & Orders Bar Chart */}
-      <Card>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
         <CardHeader>
-          <CardTitle>Clientes y Pedidos</CardTitle>
+          <CardTitle className="text-[#159a93]">Clientes y Pedidos</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" stroke="#374151" />
+              <YAxis stroke="#374151" />
               <Tooltip />
               <Bar dataKey="customers" fill="#10b981" name="Clientes" />
               <Bar dataKey="orders" fill="#f59e0b" name="Pedidos" />

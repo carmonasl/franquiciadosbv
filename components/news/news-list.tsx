@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 import { es } from "date-fns/locale";
-import { NewsItem } from "@/types"; // adjust the path to your NewsItem type
+import { NewsItem } from "@/types"; // ajusta la ruta según tu proyecto
 
 export default async function NewsList() {
   const supabase = await createClient();
@@ -16,9 +16,9 @@ export default async function NewsList() {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-red-600">Error fetching news: {error.message}</p>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
+        <CardContent className="pt-6 text-red-600">
+          Error al cargar noticias: {error.message}
         </CardContent>
       </Card>
     );
@@ -26,11 +26,9 @@ export default async function NewsList() {
 
   if (!news || news.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-gray-500">
-            No hay noticias publicadas
-          </p>
+      <Card className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm p-4">
+        <CardContent className="pt-6 text-center text-gray-500">
+          No hay noticias publicadas
         </CardContent>
       </Card>
     );
@@ -39,13 +37,18 @@ export default async function NewsList() {
   return (
     <div className="space-y-6">
       {news.map((item: NewsItem) => (
-        <Card key={item.id}>
+        <Card
+          key={item.id}
+          className="bg-white border border-[#159a93]/30 rounded-2xl shadow-sm hover:shadow-md transition"
+        >
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <CardTitle className="text-xl">{item.title}</CardTitle>
+                <CardTitle className="text-xl text-[#159a93]">
+                  {item.title}
+                </CardTitle>
                 <div className="flex items-center space-x-2 mt-2">
-                  <Badge variant="secondary">
+                  <Badge className="bg-[#159a93]/10 text-[#159a93] border-none">
                     {formatDistanceToNow(new Date(item.created_at), {
                       addSuffix: true,
                       locale: es,
