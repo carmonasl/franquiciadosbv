@@ -37,10 +37,10 @@ export async function Sidebar() {
   const role = profile?.role === "admin" ? "Administrador" : "Franquiciado";
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-[#159a93] shadow-sm">
+    <div className="flex h-full w-64 xl:w-72 flex-col bg-white border-r border-[#159a93] shadow-sm">
       {/* Logo / Marca fijo arriba */}
       <div className="h-16 flex items-center justify-center bg-[#159a93]">
-        <h1 className="text-lg font-bold text-white">BookingVans</h1>
+        <h1 className="text-lg xl:text-xl font-bold text-white">BookingVans</h1>
       </div>
 
       {/* Contenido scrollable */}
@@ -51,21 +51,23 @@ export async function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-[#159a93]"
+              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-[#159a93] transition-colors"
             >
-              <item.icon className="h-5 w-5 text-gray-400 group-hover:text-[#159a93]" />
-              {item.name}
+              <item.icon className="h-5 w-5 text-gray-400 group-hover:text-[#159a93] transition-colors" />
+              <span className="truncate">{item.name}</span>
             </Link>
           ))}
         </nav>
 
-        {/* Línea separadora (color corporativo suave) */}
+        {/* Línea separadora */}
         <div className="mx-4 my-4 h-px bg-[#159a93]/30" />
 
         {/* Usuario */}
-        <div className="px-4 space-y-2">
+        <div className="px-4 space-y-3">
           <div className="text-sm">
-            <div className="font-semibold text-gray-800">{displayName}</div>
+            <div className="font-semibold text-gray-800 truncate">
+              {displayName}
+            </div>
             <div className="text-xs font-medium text-[#159a93]">{role}</div>
           </div>
 
@@ -74,10 +76,10 @@ export async function Sidebar() {
               variant="ghost"
               size="sm"
               type="submit"
-              className="w-full justify-start text-gray-600 hover:text-[#159a93]"
+              className="w-full justify-start text-gray-600 hover:text-[#159a93] hover:bg-gray-100"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Cerrar sesión
+              <span className="truncate">Cerrar sesión</span>
             </Button>
           </form>
         </div>

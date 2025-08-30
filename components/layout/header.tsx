@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User } from "lucide-react";
+import { MobileMenuButton } from "./mobile-menu-button";
 
 export async function Header() {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export async function Header() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return null; // No renderizar si no hay usuario
+    return null;
   }
 
   // Fetch user profile
@@ -35,21 +36,34 @@ export async function Header() {
       .toUpperCase() || "U";
 
   return (
-    <header className="bg-white border-b border-[#159a93] shadow-sm h-16 flex items-center justify-between px-6">
-      {/* Branding / título */}
-      <div className="flex items-center space-x-2">
-        <div className="h-8 w-1.5 rounded-full bg-[#159a93]" />
-        <h2 className="text-lg font-semibold text-gray-900">
-          Bienvenido, <span className="text-[#159a93]">{displayName}</span>
-        </h2>
+    <header className="bg-white border-b border-[#159a93] shadow-sm h-16 flex items-center justify-between px-4 lg:px-6">
+      {/* Mobile menu button and branding */}
+      <div className="flex items-center space-x-3">
+        {/* Mobile menu button - only visible on mobile */}
+        <div className="lg:hidden">
+          <MobileMenuButton />
+        </div>
+
+        {/* Branding */}
+        <div className="flex items-center space-x-2">
+          <div className="h-8 w-1.5 rounded-full bg-[#159a93]" />
+          <h2 className="text-base lg:text-lg font-semibold text-gray-900">
+            <span className="hidden sm:inline">Bienvenido, </span>
+            <span className="text-[#159a93]">
+              {/* Show only first name on mobile, full name on larger screens */}
+              <span className="sm:hidden">{displayName.split(" ")[0]}</span>
+              <span className="hidden sm:inline">{displayName}</span>
+            </span>
+          </h2>
+        </div>
       </div>
 
-      {/* Menú usuario */}
+      {/* User menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center space-x-2 rounded-full hover:bg-gray-100 p-1.5 transition">
-            <Avatar className="h-9 w-9 border border-gray-200">
-              <AvatarFallback className="bg-[#159a93] text-white font-semibold">
+            <Avatar className="h-8 w-8 lg:h-9 lg:w-9 border border-gray-200">
+              <AvatarFallback className="bg-[#159a93] text-white font-semibold text-sm">
                 {initials}
               </AvatarFallback>
             </Avatar>
