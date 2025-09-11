@@ -15,6 +15,7 @@ const navigation = [
   { name: "Documentos", href: "/documents", icon: FileText },
   { name: "Noticias", href: "/news", icon: Newspaper },
   { name: "Informes", href: "/reports", icon: BarChart3 },
+  { name: "Facturacion", href: "/facturacion", icon: BarChart3 },
 ];
 
 export async function Sidebar() {

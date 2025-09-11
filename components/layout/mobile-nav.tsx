@@ -8,6 +8,7 @@ const navigation = [
   { name: "Documentos", href: "/documents", iconName: "FileText" },
   { name: "Noticias", href: "/news", iconName: "Newspaper" },
   { name: "Informes", href: "/reports", iconName: "BarChart3" },
+  { name: "Facturacion", href: "/facturacion", iconName: "BarChart3" },
 ];
 
 export async function MobileNav() {
